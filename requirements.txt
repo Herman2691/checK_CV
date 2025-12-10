@@ -1,2 +1,4 @@
-mistralai
 streamlit
+mistralai
+reportlab
+python-dotenv

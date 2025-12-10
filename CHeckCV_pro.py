@@ -3,8 +3,8 @@ CHECK CV - Application d'analyse de CV avec AI
 Version Professionnelle
 """
 
-from dotenv import load_dotenv
-load_dotenv()
+#from dotenv import load_dotenv
+#load_dotenv()
 
 import streamlit as st
 import os

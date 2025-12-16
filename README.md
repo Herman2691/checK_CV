@@ -202,9 +202,10 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
 ## 👤 Auteur
 
-**Votre Nom**
+**Votre Nom: KANDOLO HERMAN
 - GitHub: [Herman2691](https://github.com/Herman269)
 - LinkedIn: [Votre Profil](https://linkedin.com/in/votre-profil)
+- lien pour tester l'application: https://checkcv-2025.streamlit.app/
 
 ## 🙏 Remerciements
 

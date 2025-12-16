@@ -205,8 +205,7 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 **Votre Nom: KANDOLO HERMAN
 - GitHub: [Herman2691](https://github.com/Herman269)
 - LinkedIn: [Votre Profil](https://linkedin.com/in/votre-profil)
-- lien pour tester l'application: https://checkcv-2025.streamlit.app/
-
+- lien pour tester l'application: https://checkcv2-2025.streamlit.app
 ## 🙏 Remerciements
 
 - [Mistral AI](https://mistral.ai) pour leur excellent modèle d'IA

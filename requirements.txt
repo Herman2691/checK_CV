@@ -3,5 +3,3 @@ mistralai
 reportlab
 python-dotenv
 PyPDF2
-
-

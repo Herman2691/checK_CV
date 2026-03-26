@@ -1,6 +1,6 @@
 """
-CHECK CV - Application d'analyse de CV avec AI
-Version Professionnelle
+CHECK CV - Application d'analyse de CV avec IA
+Design inspiré de l'interface Gemini (Épuré & Moderne)
 """
 
 from dotenv import load_dotenv
@@ -8,7 +8,7 @@ load_dotenv()
 
 import streamlit as st
 import os
-from mistralai.client import MistralClient  # ✅ CHANGÉ
+from mistralai.client import MistralClient
 import json
 from typing import List, Dict
 import io
@@ -19,592 +19,257 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 import base64
 
-# Configuration de la page
+# --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(
     page_title="CHECK CV - Analyseur de CV Professionnel",
-    page_icon="🎯",
+    page_icon="✨",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-def get_base64_image(image_path):
-    """Convertit une image en base64 pour l'affichage dans le HTML"""
-    try:
-        with open(image_path, "rb") as img_file:
-            return base64.b64encode(img_file.read()).decode()
-    except Exception as e:
-        st.warning(f"Image {image_path} non trouvée: {str(e)}")
-        return None
-
+# --- DESIGN INSPIRÉ DE GEMINI (CSS) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    * { font-family: 'Inter', sans-serif; }
-    .stApp { background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%); }
-    .main { background: transparent; }
+    @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap');
+    
+    * { font-family: 'Inter', 'Google Sans', sans-serif; }
+
+    /* Fond principal (Gris très clair Gemini) */
+    .stApp { background-color: #f8f9fa; }
+    
+    /* Header principal style "Google" */
     .professional-header {
-        background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
-        padding: 40px 30px; border-radius: 20px; margin-bottom: 30px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3); text-align: center;
+        background: white;
+        padding: 40px 30px; 
+        border-radius: 24px; 
+        margin-bottom: 30px;
+        border: 1px solid #e3e3e3;
+        text-align: center;
     }
+    
     .professional-header h1 {
-        color: white; font-size: 3.5em; font-weight: 800; margin: 0;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        display: flex; align-items: center; justify-content: center; gap: 20px;
+        color: #1f1f1f; 
+        font-size: 2.8em; 
+        font-weight: 500; 
+        margin: 0;
+        letter-spacing: -0.5px;
     }
-    .header-icon { width: 80px; height: 80px; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.2)); }
-    .professional-header p { color: rgba(255,255,255,0.9); font-size: 1.3em; margin-top: 10px; font-weight: 300; }
-    .upload-card {
-        background: white; border-radius: 20px; padding: 30px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1); transition: all 0.3s ease;
-        border: 1px solid rgba(0,0,0,0.05); height: 100%;
+    
+    .professional-header p { 
+        color: #444746; 
+        font-size: 1.1em; 
+        margin-top: 10px; 
     }
-    .upload-card:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(0,0,0,0.15); }
-    .card-header {
-        display: flex; align-items: center; gap: 15px;
-        margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #f0f0f0;
+
+    /* Cartes d'upload et de résultats */
+    .upload-card, .result-card {
+        background: white; 
+        border-radius: 24px; 
+        padding: 25px;
+        border: 1px solid #e3e3e3;
+        transition: all 0.2s ease;
+        margin-bottom: 20px;
     }
-    .card-header h3 { color: #0083b0; font-size: 1.5em; font-weight: 700; margin: 0; }
-    .icon-circle { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    .icon-circle img { width: 100%; height: 100%; object-fit: cover; }
-    .icon-job { background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%); }
-    .icon-cv { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
-    .success-box {
-        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-        border: 2px solid #28a745; border-radius: 15px; padding: 20px;
-        margin-top: 20px; box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
+
+    .result-card:hover {
+        background-color: #f1f3f4;
+        border-color: #c1c1c1;
     }
-    .success-box-icon { font-size: 24px; margin-right: 10px; }
-    .result-card {
-        background: white; border-radius: 20px; padding: 35px; margin: 25px 0;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-left: 6px solid #00b4db;
-        transition: all 0.3s ease; animation: fadeIn 0.5s ease;
+
+    .card-header h3 { 
+        color: #1f1f1f; 
+        font-size: 1.4em; 
+        font-weight: 500; 
+        margin: 0; 
     }
-    .result-card:hover { transform: translateX(10px); box-shadow: 0 15px 40px rgba(0,0,0,0.15); }
-    .result-header {
-        display: flex; justify-content: space-between; align-items: center;
-        margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f0f0f0;
-    }
-    .candidate-info { display: flex; align-items: center; gap: 20px; }
-    .rank-badge {
-        width: 60px; height: 60px; border-radius: 50%;
-        background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
-        display: flex; align-items: center; justify-content: center;
-        color: white; font-size: 24px; font-weight: 800;
-        box-shadow: 0 5px 15px rgba(0, 180, 219, 0.4);
-    }
-    .candidate-name { font-size: 1.8em; font-weight: 700; color: #0083b0; margin: 0; }
-    .candidate-file { font-size: 0.9em; color: #888; margin-top: 5px; }
-    .score-display { text-align: right; }
+
+    /* Score et Badges */
     .score-number {
-        font-size: 3.5em; font-weight: 800;
-        background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1;
+        font-size: 3em; 
+        font-weight: 500;
+        color: #0b57d0; /* Bleu Google */
+        line-height: 1;
     }
-    .score-label { font-size: 0.9em; color: #888; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; }
-    .score-excellent {
-        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); color: #155724;
-        padding: 10px 25px; border-radius: 30px; font-weight: 700; font-size: 1em;
-        display: inline-block; box-shadow: 0 5px 15px rgba(21, 87, 36, 0.2); border: 2px solid #28a745;
-    }
-    .score-bon {
-        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); color: #0c5460;
-        padding: 10px 25px; border-radius: 30px; font-weight: 700; font-size: 1em;
-        display: inline-block; box-shadow: 0 5px 15px rgba(12, 84, 96, 0.2); border: 2px solid #17a2b8;
-    }
-    .score-moyen {
-        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); color: #856404;
-        padding: 10px 25px; border-radius: 30px; font-weight: 700; font-size: 1em;
-        display: inline-block; box-shadow: 0 5px 15px rgba(133, 100, 4, 0.2); border: 2px solid #ffc107;
-    }
-    .score-faible {
-        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); color: #721c24;
-        padding: 10px 25px; border-radius: 30px; font-weight: 700; font-size: 1em;
-        display: inline-block; box-shadow: 0 5px 15px rgba(114, 28, 36, 0.2); border: 2px solid #dc3545;
-    }
+
+    /* Sections d'analyse avec couleurs douces */
     .analysis-section {
-        background: #f8f9fa; border-radius: 15px; padding: 25px;
-        margin-top: 20px; border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 16px; 
+        padding: 20px;
+        margin-top: 15px;
+        border: 1px solid transparent;
+        height: 100%;
     }
-    .analysis-section h4 { font-size: 1.2em; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-    .section-strengths { background: linear-gradient(135deg, #d4edda 0%, #e8f5e9 100%); border-left: 4px solid #28a745; }
-    .section-improvements { background: linear-gradient(135deg, #fff3cd 0%, #fff8e1 100%); border-left: 4px solid #ffc107; }
-    .section-recommendations { background: linear-gradient(135deg, #d1ecf1 0%, #e1f5fe 100%); border-left: 4px solid #17a2b8; }
-    .analysis-section ul { list-style: none; padding: 0; margin: 0; }
-    .analysis-section li {
-        padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05);
-        display: flex; align-items: start; gap: 12px; font-size: 1em; line-height: 1.6;
-    }
-    .analysis-section li:last-child { border-bottom: none; }
-    .bullet { font-size: 1.3em; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+    
+    .section-strengths { background-color: #e8f0fe; border-color: #d2e3fc; color: #174ea6; } 
+    .section-improvements { background-color: #fef7e0; border-color: #feefc3; color: #b06000; }
+    .section-recommendations { background-color: #f1f3f4; border-color: #e3e3e3; color: #1f1f1f; }
+
+    .analysis-section h4 { font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+
+    /* Boutons style Google (Pilule) */
     .stButton > button {
-        background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
-        color: white; border: none; padding: 18px 50px; font-size: 1.2em; font-weight: 700;
-        border-radius: 50px; box-shadow: 0 10px 30px rgba(0, 180, 219, 0.4);
-        transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px;
+        background-color: #0b57d0 !important;
+        color: white !important;
+        border-radius: 100px !important;
+        padding: 14px 32px !important;
+        border: none !important;
+        font-weight: 500 !important;
+        transition: background-color 0.2s !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
     }
-    .stButton > button:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(0, 180, 219, 0.6); }
-    .stProgress > div > div { background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%); }
+
+    .stButton > button:hover {
+        background-color: #0842a0 !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+    }
+
+    /* Sidebar et Stats */
     .stat-card {
-        background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%); color: white;
-        padding: 20px; border-radius: 15px; margin: 10px 0;
-        box-shadow: 0 5px 15px rgba(0, 180, 219, 0.3);
+        background: #0b57d0; 
+        color: white;
+        padding: 20px; 
+        border-radius: 16px; 
+        margin-bottom: 10px;
     }
-    .stat-number { font-size: 2.5em; font-weight: 800; margin: 0; }
-    .stat-label { font-size: 0.9em; opacity: 0.9; margin-top: 5px; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
+# --- FONCTIONS UTILITAIRES ---
 
-# ✅ CHANGÉ : Utilisation de MistralClient (Ancien SDK)
+def get_base64_image(image_path):
+    try:
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    except:
+        return None
+
 @st.cache_resource
 def init_mistral():
-    """Initialise le client Mistral AI"""
     api_key = os.getenv("MISTRAL_API_KEY")
     if not api_key:
-        st.error("⚠️ Clé API Mistral non trouvée. Veuillez configurer MISTRAL_API_KEY dans le fichier .env")
+        st.error("⚠️ Clé API Mistral non trouvée.")
         st.stop()
-    return MistralClient(api_key=api_key)  # ✅ CHANGÉ
-
+    return MistralClient(api_key=api_key)
 
 def extract_text_from_file(uploaded_file) -> str:
-    """Extrait le texte d'un fichier uploadé"""
     try:
         if uploaded_file.type == "text/plain":
             return uploaded_file.getvalue().decode("utf-8")
         elif uploaded_file.type == "application/pdf":
             import PyPDF2
             pdf_reader = PyPDF2.PdfReader(io.BytesIO(uploaded_file.getvalue()))
-            text = ""
-            for page in pdf_reader.pages:
-                text += page.extract_text()
-            return text
+            return "".join([page.extract_text() for page in pdf_reader.pages])
         elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
             import docx
             doc = docx.Document(io.BytesIO(uploaded_file.getvalue()))
-            return "\n".join([paragraph.text for paragraph in doc.paragraphs])
-        else:
-            return uploaded_file.getvalue().decode("utf-8")
+            return "\n".join([p.text for p in doc.paragraphs])
+        return ""
     except Exception as e:
-        st.error(f"Erreur lors de la lecture du fichier {uploaded_file.name}: {str(e)}")
+        st.error(f"Erreur lecture {uploaded_file.name}: {e}")
         return ""
 
-
 def analyze_cv_with_mistral(client: MistralClient, job_description: str, cv_content: str, cv_name: str) -> dict:
-
-    prompt = f"""Tu es un expert en recrutement. Analyse ce CV par rapport à l'offre d'emploi et réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks).
-
-Offre d'emploi:
-{job_description}
-
-CV du candidat ({cv_name}):
-{cv_content}
-
-Analyse le CV et fournis:
-1. Le NOM et PRÉNOM complet du candidat (extrait du CV)
-2. Un score de 0 à 100 représentant l'adéquation du candidat avec le poste
-3. 3 à 5 points forts du candidat
-4. 3 à 5 points à améliorer
-5. 3 à 5 recommandations concrètes pour améliorer le CV
-
-Format de réponse (JSON strict, sans texte avant ou après):
-{{
-  "nom_complet": "Prénom NOM du candidat",
-  "score": <nombre entre 0 et 100>,
-  "points_forts": ["point1", "point2", "point3"],
-  "points_amelioration": ["point1", "point2", "point3"],
-  "recommandations": ["rec1", "rec2", "rec3"]
-}}"""
+    prompt = f"""Tu es un expert RH. Analyse ce CV par rapport au poste. Réponds EXCLUSIVEMENT en JSON.
+    Poste: {job_description}
+    CV ({cv_name}): {cv_content}
+    JSON format:
+    {{
+      "nom_complet": "NOM Prénom",
+      "score": 85,
+      "points_forts": ["..."],
+      "points_amelioration": ["..."],
+      "recommandations": ["..."]
+    }}"""
 
     try:
-        # ✅ CHANGÉ : client.chat() pour l'ancien SDK
         from mistralai.models.chat_completion import ChatMessage
-        
         response = client.chat(
             model="mistral-large-latest",
             messages=[ChatMessage(role="user", content=prompt)],
-            temperature=0.3,
-            max_tokens=1500
+            temperature=0.2
         )
-
         content = response.choices[0].message.content.strip()
-        if content.startswith("```json"):
-            content = content.replace("```json", "").replace("```", "").strip()
-        elif content.startswith("```"):
-            content = content.replace("```", "").strip()
-
-        result = json.loads(content)
-
-        return {
-            "nom_complet": result.get("nom_complet", "Nom non trouvé"),
-            "score": result.get("score", 0),
-            "points_forts": result.get("points_forts", []),
-            "points_amelioration": result.get("points_amelioration", []),
-            "recommandations": result.get("recommandations", [])
-        }
-
-    except json.JSONDecodeError:
-        return {
-            "nom_complet": "Nom non trouvé",
-            "score": 50,
-            "points_forts": ["Profil intéressant"],
-            "points_amelioration": ["CV à approfondir"],
-            "recommandations": ["Détailler davantage les expériences"]
-        }
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        return json.loads(content)
     except Exception as e:
-        st.error(f"Erreur lors de l'analyse de {cv_name}: {str(e)}")
         return None
 
-
-def generate_pdf_report(results: List[Dict], job_description: str) -> bytes:
-    """Génère un rapport PDF des résultats"""
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm,
-                           topMargin=2*cm, bottomMargin=2*cm)
-
-    story = []
-    styles = getSampleStyleSheet()
-
-    title_style = ParagraphStyle(
-        'CustomTitle', parent=styles['Heading1'], fontSize=24,
-        textColor=colors.HexColor('#00b4db'), spaceAfter=30, alignment=1
-    )
-    header_style = ParagraphStyle(
-        'CustomHeader', parent=styles['Heading2'], fontSize=16,
-        textColor=colors.HexColor('#0083b0'), spaceAfter=12, spaceBefore=12
-    )
-
-    story.append(Paragraph("CHECK CV - RAPPORT D'ANALYSE", title_style))
-    story.append(Paragraph(f"Date: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
-    story.append(Spacer(1, 0.5*cm))
-
-    story.append(Paragraph("RESUME DE L'ANALYSE", header_style))
-    summary_data = [
-        ['Nombre de candidats analysés:', str(len(results))],
-        ['Excellent (80%+):', str(sum(1 for r in results if r['score'] >= 80))],
-        ['Bon (60-79%):', str(sum(1 for r in results if 60 <= r['score'] < 80))],
-        ['Moyen (40-59%):', str(sum(1 for r in results if 40 <= r['score'] < 60))],
-        ['Faible (<40%):', str(sum(1 for r in results if r['score'] < 40))],
-    ]
-
-    summary_table = Table(summary_data, colWidths=[12*cm, 4*cm])
-    summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f0f9ff')),
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 11),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#00b4db'))
-    ]))
-
-    story.append(summary_table)
-    story.append(Spacer(1, 1*cm))
-
-    for idx, result in enumerate(results):
-        if idx > 0:
-            story.append(PageBreak())
-
-        story.append(Paragraph(f"CANDIDAT #{idx + 1}", header_style))
-        story.append(Paragraph(f"<b>Nom:</b> {result['nom_complet']}", styles['Normal']))
-        story.append(Paragraph(f"<b>Fichier:</b> {result['filename']}", styles['Normal']))
-        story.append(Spacer(1, 0.3*cm))
-
-        score_color = '#28a745' if result['score'] >= 80 else '#17a2b8' if result['score'] >= 60 else '#ffc107' if result['score'] >= 40 else '#dc3545'
-        score_text = f"<b>Score d'adequation: <font color='{score_color}'>{result['score']}%</font></b>"
-        story.append(Paragraph(score_text, styles['Normal']))
-        story.append(Spacer(1, 0.5*cm))
-
-        story.append(Paragraph("<b>POINTS FORTS</b>", header_style))
-        for point in result['points_forts']:
-            story.append(Paragraph(f"• {point}", styles['Normal']))
-        story.append(Spacer(1, 0.3*cm))
-
-        story.append(Paragraph("<b>POINTS A AMELIORER</b>", header_style))
-        for point in result['points_amelioration']:
-            story.append(Paragraph(f"• {point}", styles['Normal']))
-        story.append(Spacer(1, 0.3*cm))
-
-        story.append(Paragraph("<b>RECOMMANDATIONS</b>", header_style))
-        for rec in result['recommandations']:
-            story.append(Paragraph(f"• {rec}", styles['Normal']))
-        story.append(Spacer(1, 0.5*cm))
-
-    doc.build(story)
-    buffer.seek(0)
-    return buffer.getvalue()
-
-
-def get_score_badge(score: int) -> str:
-    """Retourne le badge HTML selon le score"""
-    if score >= 80:
-        return f'<span class="score-excellent">⭐ EXCELLENT - {score}%</span>'
-    elif score >= 60:
-        return f'<span class="score-bon">✓ BON - {score}%</span>'
-    elif score >= 40:
-        return f'<span class="score-moyen">○ MOYEN - {score}%</span>'
-    else:
-        return f'<span class="score-faible">⚠ FAIBLE - {score}%</span>'
-
+# --- INTERFACE PRINCIPALE ---
 
 def main():
-    check_img = get_base64_image("check.png")
-    cv_img = get_base64_image("imageCV.png")
-    offre_img = get_base64_image("imageoffre.png")
-
-    header_html = '<div class="professional-header"><h1>'
-    if check_img:
-        header_html += f'<img src="data:image/png;base64,{check_img}" class="header-icon" />'
-    header_html += "CHECK CV</h1><p>Plateforme d'Analyse Intelligente de CV avec IA</p></div>"
-    st.markdown(header_html, unsafe_allow_html=True)
-
+    st.markdown('<div class="professional-header"><h1>CHECK CV</h1><p>Analyse intelligente propulsée par l\'IA</p></div>', unsafe_allow_html=True)
+    
     client = init_mistral()
-
-    with st.sidebar:
-        st.markdown("### 📋 GUIDE D'UTILISATION")
-        st.markdown("""
-        <div style='background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 15px; border-left: 4px solid #00b4db;'>
-        <ol style='margin: 0; padding-left: 20px;'>
-            <li style='margin: 10px 0;'><strong>Importer</strong> l'offre d'emploi</li>
-            <li style='margin: 10px 0;'><strong>Charger</strong> les CV candidats</li>
-            <li style='margin: 10px 0;'><strong>Lancer</strong> l'analyse IA</li>
-            <li style='margin: 10px 0;'><strong>Consulter</strong> les résultats</li>
-        </ol>
-        </div>
-        """, unsafe_allow_html=True)
-
-        if 'results' in st.session_state and st.session_state.results:
-            st.markdown("---")
-            st.markdown("### 📊 STATISTIQUES")
-
-            total = len(st.session_state.results)
-            excellent = sum(1 for r in st.session_state.results if r['score'] >= 80)
-            bon = sum(1 for r in st.session_state.results if 60 <= r['score'] < 80)
-            moyen = sum(1 for r in st.session_state.results if 40 <= r['score'] < 60)
-            faible = sum(1 for r in st.session_state.results if r['score'] < 40)
-
-            st.markdown(f"""
-            <div class="stat-card">
-                <div class="stat-number">{total}</div>
-                <div class="stat-label">CANDIDATS ANALYSÉS</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Excellent", excellent)
-                st.metric("Moyen", moyen)
-            with col2:
-                st.metric("Bon", bon)
-                st.metric("Faible", faible)
 
     col1, col2 = st.columns(2, gap="large")
 
     with col1:
-        card_header_html = '<div class="upload-card"><div class="card-header"><div class="icon-circle icon-job">'
-        if offre_img:
-            card_header_html += f'<img src="data:image/png;base64,{offre_img}" alt="Offre" />'
-        else:
-            card_header_html += '📄'
-        card_header_html += "</div><h3>Offre d'Emploi</h3></div>"
-        st.markdown(card_header_html, unsafe_allow_html=True)
-
-        job_file = st.file_uploader(
-            "Charger l'offre d'emploi",
-            type=["txt", "pdf", "docx"],
-            key="job_upload",
-            label_visibility="collapsed"
-        )
-
+        st.markdown('<div class="upload-card"><h3>📄 Offre d\'emploi</h3>', unsafe_allow_html=True)
+        job_file = st.file_uploader("Upload job", type=["txt", "pdf", "docx"], label_visibility="collapsed")
         if job_file:
-            job_description = extract_text_from_file(job_file)
-            st.session_state['job_description'] = job_description
-            st.markdown(f"""
-            <div class="success-box">
-                <div style='display: flex; align-items: center;'>
-                    <span class="success-box-icon">✓</span>
-                    <div>
-                        <strong>Offre chargée avec succès</strong><br>
-                        <small>{job_file.name} • {len(job_description)} caractères</small>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.session_state['job_text'] = extract_text_from_file(job_file)
+            st.success("Offre prête")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        card_header_html = '<div class="upload-card"><div class="card-header"><div class="icon-circle icon-cv">'
-        if cv_img:
-            card_header_html += f'<img src="data:image/png;base64,{cv_img}" alt="CV" />'
-        else:
-            card_header_html += '👥'
-        card_header_html += '</div><h3>CV Candidats</h3></div>'
-        st.markdown(card_header_html, unsafe_allow_html=True)
-
-        cv_files = st.file_uploader(
-            "Charger les CV (max 100)",
-            type=["txt", "pdf", "docx"],
-            accept_multiple_files=True,
-            key="cv_upload",
-            label_visibility="collapsed"
-        )
-
+        st.markdown('<div class="upload-card"><h3>👥 CV Candidats</h3>', unsafe_allow_html=True)
+        cv_files = st.file_uploader("Upload CVs", type=["txt", "pdf", "docx"], accept_multiple_files=True, label_visibility="collapsed")
         if cv_files:
-            if len(cv_files) > 100:
-                st.error("⚠️ Maximum 100 CV autorisés")
-                cv_files = cv_files[:100]
             st.session_state['cv_files'] = cv_files
-            st.markdown(f"""
-            <div class="success-box">
-                <div style='display: flex; align-items: center;'>
-                    <span class="success-box-icon">✓</span>
-                    <div>
-                        <strong>{len(cv_files)} CV chargés</strong><br>
-                        <small>Prêts pour l'analyse</small>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.success(f"{len(cv_files)} CV(s) prêt(s)")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    col_center = st.columns([1, 2, 1])[1]
-    with col_center:
-        analyze_button = st.button(
-            "🚀 LANCER L'ANALYSE",
-            use_container_width=True,
-            disabled=not (st.session_state.get('job_description') and st.session_state.get('cv_files'))
-        )
+    if st.button("🚀 LANCER L'ANALYSE", use_container_width=True):
+        if 'job_text' in st.session_state and cv_files:
+            results = []
+            progress = st.progress(0)
+            for i, f in enumerate(cv_files):
+                res = analyze_cv_with_mistral(client, st.session_state['job_text'], extract_text_from_file(f), f.name)
+                if res:
+                    res['filename'] = f.name
+                    results.append(res)
+                progress.progress((i + 1) / len(cv_files))
+            
+            st.session_state['results'] = sorted(results, key=lambda x: x['score'], reverse=True)
+            st.rerun()
 
-    if analyze_button:
-        job_description = st.session_state.get('job_description')
-        cv_files = st.session_state.get('cv_files')
-
-        st.markdown("---")
-        st.markdown("### 🔄 ANALYSE EN COURS...")
-
-        results = []
-        progress_bar = st.progress(0)
-        status_container = st.empty()
-
-        for idx, cv_file in enumerate(cv_files):
-            status_container.markdown(f"""
-            <div style='background: white; padding: 20px; border-radius: 15px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1);'>
-                <h4 style='color: #00b4db; margin: 0;'>Analyse de {cv_file.name}</h4>
-                <p style='color: #888; margin: 10px 0 0 0;'>Candidat {idx + 1} sur {len(cv_files)}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-            cv_content = extract_text_from_file(cv_file)
-            if cv_content:
-                analysis = analyze_cv_with_mistral(client, job_description, cv_content, cv_file.name)
-                if analysis:
-                    results.append({
-                        'filename': cv_file.name,
-                        'nom_complet': analysis['nom_complet'],
-                        'score': analysis['score'],
-                        'points_forts': analysis['points_forts'],
-                        'points_amelioration': analysis['points_amelioration'],
-                        'recommandations': analysis['recommandations']
-                    })
-
-            progress_bar.progress((idx + 1) / len(cv_files))
-            time.sleep(0.1)
-
-        results.sort(key=lambda x: x['score'], reverse=True)
-        st.session_state['results'] = results
-
-        status_container.success("✅ Analyse terminée avec succès!")
-        st.balloons()
-
-    if 'results' in st.session_state and st.session_state.results:
-        st.markdown("---")
-        st.markdown("""
-        <div style='text-align: center; margin: 40px 0;'>
-            <h2 style='color: white; font-size: 2.5em; font-weight: 800; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>
-                📊 RÉSULTATS DE L'ANALYSE
-            </h2>
-        </div>
-        """, unsafe_allow_html=True)
-
-        for idx, result in enumerate(st.session_state.results):
+    if 'results' in st.session_state:
+        for idx, r in enumerate(st.session_state['results']):
             st.markdown(f"""
             <div class="result-card">
-                <div class="result-header">
-                    <div class="candidate-info">
-                        <div class="rank-badge">#{idx + 1}</div>
-                        <div>
-                            <h3 class="candidate-name">{result['nom_complet']}</h3>
-                            <p class="candidate-file">📄 {result['filename']}</p>
-                        </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 class="candidate-name">{r['nom_complet']}</h3>
+                        <p class="candidate-file">Fichier : {r['filename']}</p>
                     </div>
-                    <div class="score-display">
-                        <div class="score-number">{result['score']}%</div>
-                        <div class="score-label">Adéquation</div>
+                    <div style="text-align: right;">
+                        <div class="score-number">{r['score']}%</div>
+                        <div style="color: #444746; font-size: 0.8em;">MATCH</div>
                     </div>
-                </div>
-                <div style='margin: 20px 0;'>
-                    {get_score_badge(result['score'])}
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            col1, col2, col3 = st.columns(3, gap="medium")
-
-            with col1:
-                st.markdown('<div class="analysis-section section-strengths"><h4>✅ Points Forts</h4><ul>', unsafe_allow_html=True)
-                for point in result['points_forts']:
-                    st.markdown(f'<li><span class="bullet" style="color: #28a745;">●</span> {point}</li>', unsafe_allow_html=True)
-                st.markdown("</ul></div>", unsafe_allow_html=True)
-
-            with col2:
-                st.markdown('<div class="analysis-section section-improvements"><h4>⚠️ À Améliorer</h4><ul>', unsafe_allow_html=True)
-                for point in result['points_amelioration']:
-                    st.markdown(f'<li><span class="bullet" style="color: #ffc107;">●</span> {point}</li>', unsafe_allow_html=True)
-                st.markdown("</ul></div>", unsafe_allow_html=True)
-
-            with col3:
-                st.markdown('<div class="analysis-section section-recommendations"><h4>💡 Recommandations</h4><ul>', unsafe_allow_html=True)
-                for rec in result['recommandations']:
-                    st.markdown(f'<li><span class="bullet" style="color: #17a2b8;">●</span> {rec}</li>', unsafe_allow_html=True)
-                st.markdown("</ul></div>", unsafe_allow_html=True)
-
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        col1, col2 = st.columns(2, gap="medium")
-
-        with col1:
-            export_data = {
-                "date_analyse": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "nombre_candidats": len(st.session_state.results),
-                "resultats": st.session_state.results
-            }
-            st.download_button(
-                label="📥 EXPORTER EN JSON",
-                data=json.dumps(export_data, indent=2, ensure_ascii=False),
-                file_name=f"check_cv_resultats_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json",
-                use_container_width=True
-            )
-
-        with col2:
-            pdf_data = generate_pdf_report(st.session_state.results, st.session_state.get('job_description', ''))
-            st.download_button(
-                label="📄 EXPORTER EN PDF",
-                data=pdf_data,
-                file_name=f"check_cv_rapport_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
-
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.markdown('<div class="analysis-section section-strengths"><h4>✅ Points Forts</h4>', unsafe_allow_html=True)
+                for p in r['points_forts']: st.write(f"• {p}")
+                st.markdown('</div>', unsafe_allow_html=True)
+            with c2:
+                st.markdown('<div class="analysis-section section-improvements"><h4>⚠️ À Améliorer</h4>', unsafe_allow_html=True)
+                for p in r['points_amelioration']: st.write(f"• {p}")
+                st.markdown('</div>', unsafe_allow_html=True)
+            with c3:
+                st.markdown('<div class="analysis-section section-recommendations"><h4>💡 Conseils</h4>', unsafe_allow_html=True)
+                for p in r['recommandations']: st.write(f"• {p}")
+                st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()

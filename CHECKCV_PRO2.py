@@ -8,7 +8,7 @@ load_dotenv()
 
 import streamlit as st
 import os
-from mistralai import Mistral
+from mistralai.client import MistralClient
 import json
 from typing import List, Dict
 import io
